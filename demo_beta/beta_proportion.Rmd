@@ -4,6 +4,7 @@ author: "Jussi Huotari"
 date: "2020-11-27"
 output: 
   html_notebook:
+    toc: yes
     toc_depth: 2
     toc_float:
       collapsed: false
@@ -63,7 +64,7 @@ print(fit, pars = c("mu", "kappa"), probs = c(.05, .5, .95))
 
 The model fits properly, with good Rhat and n_eff values. The plots show that posterior parameter values are close to the  values used to create the simulated data set, i.e. $\mu = 0.2$ and $\kappa = 10$.
 
-## Plot parameters
+## Plot parameter estimates
 
 ```{r, fig.width=6, fig.height=2}
 bayesplot_grid( grid_args = list(ncol=2),
@@ -130,7 +131,7 @@ d <- data.frame(y = beta_with_slope, x = 1:n)
   geom_point(color = "#56B4E9DD", size = 2))
 ```
 
-## Compile
+## Fit to new data
 
 ```{r}
 stan_data <- list(N = nrow(d), y = d$y, x = d$x)
@@ -139,7 +140,7 @@ print(fit, pars = c("a", "b", "kappa"), probs = c(.05, .5, .95))
 ```
 
 
-## Validating the estimate
+## Validate the estimate
 
 I like to refer to [Robust Statistical Workflow with RStan](https://mc-stan.org/users/documentation/case-studies/rstan_workflow.html) to check the reliability of the results. The utilities are implemented conveniently in Rstan [`check_hmc_diagnostics`](https://www.rdocumentation.org/packages/rstan/versions/2.21.2/topics/check_hmc_diagnostics)
 
