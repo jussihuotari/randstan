@@ -1,0 +1,186 @@
+---
+title: "Beta proportion distribution"
+author: "Jussi Huotari"
+date: "2020-11-27"
+output: 
+  html_notebook:
+    toc_depth: 2
+    toc_float:
+      collapsed: false
+    number_sections: yes
+---
+
+Stan has [Beta Proportion Distribution](https://mc-stan.org/docs/2_25/functions-reference/beta-proportion-distribution.html) for modeling a continuous random variable that takes values between (0, 1). The distribution was implemented in [stan-dev/math#914](https://github.com/stan-dev/math/issues/914).
+
+The parameters are mu and kappa, where $\mu \in (0,1)$ and $\kappa > 0$.
+
+$$\begin{aligned}
+\mu & = \frac{\alpha}{\alpha+\beta} \\
+\kappa & = \alpha+\beta
+\end{aligned}$$
+
+For example, if $\alpha = 2$ and $\beta = 8$, then $\mu = 0.2$ and $\kappa = 10$.
+
+Let's fit a simple linear regression to see how to use the distribution to model data.
+
+```{r, message=FALSE}
+library("ggplot2")
+library("bayesplot")
+library("dplyr")
+library("rstan")
+```
+
+# Example data
+
+Let's simulate some [Beta distributed](https://en.wikipedia.org/wiki/Beta_distribution) data.
+
+```{r, fig.width=6, fig.height=3}
+n <- 200
+d <- data.frame(y = rbeta(n, 2, 8), x = 1:n)
+(ggd <- ggplot(data = d, aes(x=x, y=y)) +
+  geom_point(color = "#56B4E9DD", size = 2))
+```
+
+
+# Model: Simple Beta
+
+$$\begin{aligned}
+y & \sim BetaProportion(\mu, \kappa) \\
+\mu & \sim U(0, 1) \\
+\kappa & \sim N(10, 5), >0
+\end{aligned}$$
+
+```{r}
+stan_data <- list(N = nrow(d), y = d$y)
+fit <- stan("simple_beta_proportion.stan", data = stan_data, refresh = 0,
+            iter = 1000, seed = 42)
+cat(get_stancode(fit))
+```
+
+```{r}
+print(fit, pars = c("mu", "kappa"), probs = c(.05, .5, .95))
+```
+
+The model fits properly, with good Rhat and n_eff values. The plots show that posterior parameter values are close to the  values used to create the simulated data set, i.e. $\mu = 0.2$ and $\kappa = 10$.
+
+## Plot parameters
+
+```{r, fig.width=6, fig.height=2}
+bayesplot_grid( grid_args = list(ncol=2),
+  mcmc_hist(fit, pars = "mu", binwidth = .005) + vline_at(.2),
+  mcmc_hist(fit, pars = "kappa", binwidth = .5) + vline_at(10)
+)
+```
+
+
+```{r, fig.width=4, fig.height=2}
+yrep <- extract(fit, pars = 'yrep')$yrep
+ppc_dens_overlay(d$y, yrep[1:50, ])
+```
+
+
+# Model with predictor
+
+Using x as a predictor, the model is 
+
+$$\begin{aligned}
+y_{i} & \sim BetaProportion(\mu_i, \kappa) \\
+logit(\mu_i) & = a + b \times x \\
+\kappa & \sim N(10, 5), >0
+\end{aligned}$$
+
+Using the same data, _b_ should be 0. Because of the [logit](https://en.wikipedia.org/wiki/Logit) link function, _a_ should be interpreted with the transformation in mind. Let's see.
+
+```{r, fig.width=6, fig.height=3}
+logit <- function(p) log(p/(1-p))
+inv_logit <- function(p) 1/(1+exp(-p))
+ggplot(data = d, aes(x=x, y=logit(y))) +
+  geom_point(color = "#56B4E9DD", size = 2) +
+  labs(title = "Logit transformed data")
+```
+
+
+```{r}
+stan_data <- list(N = nrow(d), y = d$y, x = d$x)
+fit <- stan("linear_beta_proportion.stan", data = stan_data, refresh = 0, 
+            iter = 1000, seed = 42)
+cat(get_stancode(fit))
+```
+
+```{r}
+print(fit, pars = c("a", "b", "kappa"), probs = c(.05, .5, .95))
+```
+
+```{r, fig.width=6, fig.height=2}
+bayesplot_grid( grid_args = list(ncol=2),
+  mcmc_hist(fit, pars = "a", transform = inv_logit, binwidth = .005) + vline_at(.2),
+  mcmc_hist(fit, pars = "kappa", binwidth = .5) + vline_at(10)
+)
+```
+
+
+# Data with slope
+
+In the previous example, the predictor x had no effect. Let's spice up the data by making it a time series with a slight upward trend.
+
+```{r, fig.width=6, fig.height=3}
+beta_with_slope <- rbeta(n, 2, 8) + seq(from = 0, to = .1, length.out = n)
+d <- data.frame(y = beta_with_slope, x = 1:n)
+(ggd <- ggplot(data = d, aes(x=x, y=y)) +
+  geom_point(color = "#56B4E9DD", size = 2))
+```
+
+## Compile
+
+```{r}
+stan_data <- list(N = nrow(d), y = d$y, x = d$x)
+fit <- stan(fit = fit, data = stan_data, refresh = 0, seed = 42)
+print(fit, pars = c("a", "b", "kappa"), probs = c(.05, .5, .95))
+```
+
+
+## Validating the estimate
+
+I like to refer to [Robust Statistical Workflow with RStan](https://mc-stan.org/users/documentation/case-studies/rstan_workflow.html) to check the reliability of the results. The utilities are implemented conveniently in Rstan [`check_hmc_diagnostics`](https://www.rdocumentation.org/packages/rstan/versions/2.21.2/topics/check_hmc_diagnostics)
+
+```{r}
+check_hmc_diagnostics(fit)
+```
+
+
+## Plot
+
+```{r, fig.width=6, fig.height=2}
+bayesplot_grid( grid_args = list(ncol=2),
+  mcmc_hist(fit, pars = "a", transform = inv_logit, binwidth = .005) + vline_at(.2),
+  mcmc_hist(fit, pars = "kappa", binwidth = .5) + vline_at(10)
+)
+```
+
+```{r}
+theta <- apply(extract(fit)$theta, 2, quantile, c(0.05, 0.5, 0.95)) %>%
+  t() %>% data.frame(., x=d$x)
+ggd + geom_line(data = theta, aes(y = X50.), color = "#FF99FFDD") +
+  geom_ribbon(data = theta, aes(y = X50., ymin = X5., ymax = X95.), fill = "#FF99FF44")
+```
+
+```{r, fig.width=4, fig.height=2}
+yrep <- extract(fit, pars = 'yrep')$yrep
+ppc_dens_overlay(d$y, yrep[1:50, ])
+```
+
+# Conclusion
+
+Beta proportion distribution can be used to model a bounded continuous random variable. With a logit link function it's possible to build a linear model with predictors, and quite convenient to leave data transformation to the Stan code. Though it's worth considering if it's linear (enough) after the non-linear data transformation. 
+
+A challenge (for me) is the distribution's parametrization $\mu$ and $\kappa$. How to intuit about $\kappa$? What would be a good weakly informative prior, for example? 
+
+
+# Dev env
+
+```{r}
+devtools::session_info("rstan")
+```
+
+
+
