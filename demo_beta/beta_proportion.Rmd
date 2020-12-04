@@ -174,7 +174,9 @@ ppc_dens_overlay(d$y, yrep[1:50, ])
 
 Beta proportion distribution can be used to model a bounded continuous random variable. With a logit link function it's possible to build a linear model with predictors, and quite convenient to leave data transformation to the Stan code. Though it's worth considering if it's linear (enough) after the non-linear data transformation. 
 
-A challenge (for me) is the distribution's parametrization $\mu$ and $\kappa$. How to intuit about $\kappa$? What would be a good weakly informative prior, for example? 
+A challenge (for me) is the distribution's parametrization $\mu$ and $\kappa$. How to intuit about $\kappa$? What would be a good weakly informative prior, for example? Branscum, A.J., Johnson, W.O. & Thurmond, M.C. (2007) call $\kappa$ "the parameter related to variance" and suggest using a Gamma prior. In their illustration they use Gamma with mean=1 and variance=1000, which would translate to shape $\alpha$ and rate $\beta$ parameters equal to 0.001, which I would say is a non-informative prior. Laskey (2020) also suggests using Gamma prior. In her case the parameters are shape = 1, rate = 0.05 or mean = 20, variance = 400.
+
+
 
 
 # Dev env
@@ -184,4 +186,9 @@ devtools::session_info("rstan")
 ```
 
 
+# References
+
+Branscum, A.J., Johnson, W.O. and Thurmond, M.C. (2007), Bayesian Beta Regression: Applications to Household Expenditure Data and Genetic Distance Between Foot‐and‐Mouth Disease Viruses. Australian & New Zealand Journal of Statistics, 49: 287-301. https://doi.org/10.1111/j.1467-842X.2007.00481.x
+
+Laskey, K. (2020), Bayesian Inference and Decision Theory, Unit 7. Lecture slides http://seor.vse.gmu.edu/~klaskey/SYST664/Bayes_Unit7.pdf
 
