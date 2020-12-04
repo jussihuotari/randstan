@@ -1,0 +1,332 @@
+---
+title: "Wind Power Generation Efficiency and Seasonality"
+author: "Jussi Huotari"
+date: "Dec 2020"
+output:
+  revealjs::revealjs_presentation:
+    self_contained: no
+    theme: solarized
+    reveal_options:
+      slideNumber: yes
+      previewLinks: yes
+      reveal_plugins: "notes"
+      progress: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("data.table")
+library("ggplot2")
+library("lubridate")
+library("dplyr")
+library("rstan")
+library("bayesplot")
+theme_set(bayesplot::theme_default(base_size = 16))
+#w <- read.csv("~/notebooks/project/presentation_weekly_data.csv")
+w <- fread("~/notebooks/project/presentation_weekly_data.csv")
+```
+
+```{r, include=FALSE}
+#inremental: true
+```
+
+
+# Clean Electricity? {data-background-image="http://www.jussihuotari.com/randstan/demo_wind/wind_burning_fossil_fuels.jpg" data-background-opacity=.05 style="color: #FFF9CB;"}
+
+* Traditionally burn fossil fuels
+* Need to change to renewables
+* Renewables are feasible and profitable
+
+* Problem: intermittent
+
+
+# Generation Efficiency
+
+- Wind: 7% of total electricity
+- Yearly generation 5.9TWh
+- Nominal capacity 2284MW
+- Generation efficiency
+
+<p>&nbsp;</p>
+
+$$
+\frac{5.9TWh}{2284MW \times 365 \times 24h} = 29.5\%
+$$
+
+<small style="padding-top: 2em; float: right;">([Motiva, 2019](https://www.motiva.fi/ratkaisut/uusiutuva_energia/tuulivoima/tuulivoima_suomessa))</small>
+
+<aside class="notes">
+- Generation efficiency varies between 0 and 80%. Very rarely closer to 100%
+- Overall capacity is growing, now 3x that of five years ago
+</aside>
+
+
+
+# Regression Model
+
+Objective:
+
+* Trend of generation efficiency
+* Patterns to help plan demand response
+
+<p>&nbsp;</p>
+
+Two models in Rstan/Stan
+
+* M1: Simple linear Gaussian trend
+* M2: Trend + hierarchical seasonal components
+
+<aside class="notes">
+- Electricity is difficult to store
+- Value in understanding the generation patterns
+- If we can balance demand and supply, less need for polluting reserve power
+</aside>
+
+
+# Data Set {data-transition="convex-in fade-out"}
+
+```{r, echo=FALSE}
+(ggw <- ggplot(data = w, aes(x=ts, y=mug)) +
+  geom_point(color = "#56B4E988", size = 1) +
+  labs(x = "Week", y = "Generation efficiency", title = "Weekly efficiency"))
+```
+
+<aside class="notes">
+- Data from March 2015. Almost six years.
+- Open data, downloaded from Fingrid
+- Hourly generation, hourly nominal capacity
+- Grouped to weekly means and standard deviation
+- Wind energy very varied, underlines the intermittant nature of renewables
+- Generation depends heavily on weather conditions and fluctuates according to for example the season, time of day, and location.
+</aside>
+
+# Data Set {data-transition="none convex-out"}
+
+```{r, echo=FALSE}
+ggw + geom_line(data = w, aes(y = ma12), color = "#0072B288", na.rm = TRUE) +
+  labs(title = "Weekly efficiency and 12 weeks moving average")
+```
+
+
+
+# Model M1
+
+<pre><code data-line-numbers="2,9">
+...
+transformed parameters {
+  vector[N] mu = alpha + beta * x;
+}
+
+model {
+  alpha ~ normal(.3, .2);
+  beta ~ normal(0, .1);
+  sigma ~ normal(.25, .5);
+  y ~ normal(mu, sigma);
+}
+...
+</code></pre>
+
+## M1 Regression
+
+```{r loadm1, echo=FALSE}
+csv_files <- dir("~/notebooks/project/report", pattern = "m1_sample_[0-9].csv", full.names = TRUE)
+fit.1 <- read_stan_csv(csv_files)
+mu <- apply(extract(fit.1)$mu, 2, quantile, c(0.05, 0.5, 0.95)) %>%
+  t() %>% data.frame(.)
+mu$ts = w$ts
+(gglr <- ggw + 
+  geom_line(data = mu, aes(y = X50.), color = "#FF99FFDD") +
+  geom_ribbon(data = mu, aes(y = X50., ymin = X5., ymax = X95.), fill = "#FF99FF44") +
+  labs(title = "Linear regression mean and its 90% probability interval"))
+```
+
+
+<aside class="notes">
+- Simple linear Gaussian: intercept and slope
+- Slope is slightly positive (0.8, 2.1 yearly)
+- Conclusions (guesses): technical advances, bigger turbines vs best locations taken, warming weather
+</aside>
+
+## M1 PPC
+
+```{r, echo=FALSE}
+yrep <- extract(fit.1, pars = 'y_rep')$y_rep
+bayesplot_grid(
+  ppc_dens_overlay(w$mug, yrep[1:50, ]),
+  ppc_stat(w$mug, yrep[1:500,], stat = function(x){sum(x<0)}, binwidth = 1),
+  grid_args = list(nrow=2), titles = c("Simulated", "<0 values"))
+```
+
+<aside class="notes">
+- Normal distribution allow values <0 and >1
+- Overall not too bad
+</aside>
+
+# Model M2
+
+Time series as components: $y(t) = g(t) + s(t)$
+
+* $g(t)$ is linear trend
+* $s(t)$ is seasonal component
+  * Model monthly means and standard deviations
+  * Hierarchy: 6 groups of 12 observations
+
+<aside class="notes">
+- Original plan was to model thermal seasons, summer >+10, winter<0.
+- Monthly seasons give more granular view, learned from data.
+</aside>
+
+## M2 Diagram
+
+![Hierarchical model](http://www.jussihuotari.com/randstan/demo_wind/bda-hier-model.png)
+
+## M2 Checking
+
+```{r loadm2, echo=FALSE}
+csv_files <- dir("~/notebooks/project/report", pattern = "hier_sample_[0-9].csv", full.names = TRUE)
+fit <- read_stan_csv(csv_files)
+yrep <- extract(fit, pars = 'yrep')$yrep
+bayesplot_grid(
+  ppc_dens_overlay(w$mug, yrep[1:50, ]),
+  ppc_stat(w$mug, yrep[1:500,], stat = function(x){sum(x<0)}, binwidth = 1),
+  grid_args = list(nrow=2), titles = c("Simulated", "<0 values"))
+```
+
+## M2 Diagnostics
+
+```{r, include=FALSE}
+#ddiag <- as.data.frame(monitor(fit, print = FALSE))
+#fwrite(ddiag, "~/notebooks/project/presentation/fit_monitor.csv")
+```
+
+```{r}
+ddiag <- fread("fit_monitor.csv")
+ddiag %>% arrange(Rhat) %>% 
+  select(Rhat, n_eff, Bulk_ESS, Tail_ESS) %>% tail()
+```
+
+## M2 Plot
+
+```{r, echo=FALSE}
+mu <- apply(extract(fit)$mu, 2, quantile, c(0.05, 0.5, 0.95)) %>%
+  t() %>% data.frame(ts = w$ts, .)
+(gglr <- ggw + 
+  geom_line(data = mu, aes(y = X50.), color = "#D55E00DD") +
+  geom_ribbon(data = mu, aes(y = X50., ymin = X5., ymax = X95.), fill = "#D55E0044") +
+  labs(title = "Hierarchical regression and its 90% probability interval"))
+```
+
+## M2 Monthly Posterior
+
+```{r, include=FALSE}
+d.months <- as.data.frame(extract(fit, pars = c("theta", "monthmu")))
+#d.quant <- as.data.frame(lapply(d.months, quantile, c(.05, .5, .95))) %>% t() %>% data.frame(.)
+#apply(d.months, 2, quantile, c(.05, .5, .95)) %>% t() %>% data.frame(.)
+```
+
+
+```{r, echo=FALSE}
+mean.theta <- mean(d.months$theta)
+mcmc_areas_ridges(d.months, transformations = function(x) x-mean.theta) +
+  vline_0(col = "#D55E00DD")
+```
+
+
+
+```{r, echo=FALSE}
+# mean.theta <- mean(extract(fit, pars = "theta")$theta)
+# mcmc_areas_ridges(fit, pars = "theta", regex_pars = "monthmu", transformations = function(x) x-mean.theta) +
+#   vline_0(col = "#D55E00DD")
+```
+
+
+# Model Comparison
+
+```{r}
+print(loo(fit))
+```
+
+```{r, echo=FALSE}
+data.frame(Model = c("M1", "M2"), MSE = c(.017, .013), elpd_loo = c(as.integer(180), as.integer(216)))
+```
+
+<aside class="notes">
+- M2 is a better model
+- Both metrics bad, because learn from future
+- Better k-fold or LFO
+- Leave-Future-Out didn't change comparison result
+</aside>
+
+
+
+# Forecast
+
+```{r forecast, echo=FALSE, warning=FALSE, error=FALSE}
+pred.data <- list(x = 298:303, # Forecast 6 weeks, until Dec 26th 2020
+                  ts = c(last(w$ts), last(w$ts) + weeks(1:5)))
+pred.pars <- extract(fit, pars = c("a", "b", "tsigma", "monthmu[11]", 
+                                   "monthmu[12]", "monthsd[11]", "monthsd[12]"))
+# 4000 x 6 weeks
+pred.trend <- as.vector(pred.pars$a) + pred.pars$b %*% t(pred.data$x)
+pred.season <- cbind(matrix(rep(pred.pars$"monthmu[11]", 2), ncol=2, byrow=TRUE),
+                     matrix(rep(pred.pars$"monthmu[12]", 4), ncol=4, byrow=TRUE))
+pred.seassd <- cbind(matrix(rep(pred.pars$"monthsd[11]", 2), ncol=2, byrow=TRUE),
+                     matrix(rep(pred.pars$"monthsd[12]", 4), ncol=4, byrow=TRUE))
+ssize <- 4000
+#pred.season <- matrix(data = 0, nrow = ssize, ncol = 6)
+#for (i in 1:6) {
+#  pred.season[,i] <- rnorm(ssize, mean = pred.seasmu[,i], sd = pred.seassd[,i])
+#}
+pred.mu <- pred.trend + pred.season
+pred.pred <- matrix(data = 0, nrow = ssize, ncol = 6)
+for (i in 1:6) {
+  pred.pred[,i] <- rnorm(ssize, mean = pred.mu[,i], sd = pred.pars$tsigma)
+}
+pred.quant <- apply(pred.pred, 2, quantile, c(0.05, 0.5, 0.95)) %>%
+  t() %>% data.frame(ts = pred.data$ts, .)
+pred.quantmu <- apply(pred.mu, 2, quantile, c(0.05, 0.5, 0.95)) %>%
+  t() %>% data.frame(ts = pred.data$ts, .)
+ggw +
+  geom_line(data = mu, aes(y = X50.), color = "#D55E00DD") +
+  geom_ribbon(data = mu, aes(y = X50., ymin = X5., ymax = X95.), fill = "#D55E0044") +
+  geom_line(data = pred.quant, aes(y = X50.), color = "#FF99FFDD") +
+  geom_ribbon(data = pred.quant, aes(y = X50., ymin = X5., ymax = X95.), fill = "#FF99FF44") +
+  geom_line(data = pred.quantmu, aes(y = X50.), color = "#FF99FFDD") +
+  geom_ribbon(data = pred.quantmu, aes(y = X50., ymin = X5., ymax = X95.), fill = "#FF99FF44") +
+  labs(title = "Prediction and its 90% probability interval") +
+  xlim(w$ts[220], pred.data$ts[6])
+```
+
+<aside class="notes">
+- Wide interval
+- While that's realistic, it's not necessarily good for anything practical.
+</aside>
+
+## Seasonal Forecast
+
+```{r, echo=FALSE, warning=FALSE}
+colnames(d.months) <- c("theta", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+(d.months - mean.theta) %>% select(Jan:Dec) %>% melt(id.vars=0) %>%
+  group_by(variable) %>% mutate(mean = mean(value)) %>% ungroup() %>%
+ggplot(aes(x = variable, y = value)) + 
+  #geom_boxplot(aes(fill = mean), outlier.alpha = 0.1) +
+  geom_violin(aes(fill = mean)) + xlab(NULL) + hline_0() + ylab(NULL) + 
+  #scale_color_gradient2(low = 'red', mid = 'white', high = 'blue')
+  scale_fill_gradient2() #low = 'red', mid = 'white', high = 'blue') 
+```
+
+
+# Conclusion {data-background-image="http://www.jussihuotari.com/randstan/demo_wind/wind_turbines_finland.jpg"}
+
+* Predicted yearly increase mean is 1.4%
+  * 90% probability interval (0.8%, 2.1%)
+* Large seasonal variance
+  * July median 0.18 vs December median 0.39!
+* Capacity x 3 during the past six years.
+* High daily variation
+* More at [jussihuotari.com/randstan/demo_wind/](http://jussihuotari.com/randstan/demo_wind/wind_seasonality_report.html)
+
+<aside class="notes">
+- The predicted yearly (52 weeks) increase is at 90% probability between 0.8% and 2.1%, with a mean at 1.4%.
+- At the same time the average generation efficiency of the wind turbines has increased 8%.
+</aside>

@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="Jussi Huotari" />
+  <title>Wind Power Generation Efficiency and Seasonality</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="presentation_files/reveal.js-3.3.0.1/css/reveal.css"/>
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<link rel="stylesheet" href="presentation_files/reveal.js-3.3.0.1/css/theme/solarized.css" id="theme">
+
+
+  <!-- some tweaks to reveal css -->
+  <style type="text/css">
+    .reveal h1 { font-size: 2.0em; }
+    .reveal h2 { font-size: 1.5em;  }
+    .reveal h3 { font-size: 1.25em;	}
+    .reveal h4 { font-size: 1em;	}
+
+    .reveal .slides>section,
+    .reveal .slides>section>section {
+      padding: 0px 0px;
+    }
+
+
+
+    .reveal table {
+      border-width: 1px;
+      border-spacing: 2px;
+      border-style: dotted;
+      border-color: gray;
+      border-collapse: collapse;
+      font-size: 0.7em;
+    }
+
+    .reveal table th {
+      border-width: 1px;
+      padding-left: 10px;
+      padding-right: 25px;
+      font-weight: bold;
+      border-style: dotted;
+      border-color: gray;
+    }
+
+    .reveal table td {
+      border-width: 1px;
+      padding-left: 10px;
+      padding-right: 25px;
+      border-style: dotted;
+      border-color: gray;
+    }
+
+
+  </style>
+
+    <style type="text/css">code{white-space: pre;}</style>
+
+
+<!-- Printing and PDF exports -->
+<script id="paper-css" type="application/dynamic-css">
+
+/* Default Print Stylesheet Template
+   by Rob Glazebrook of CSSnewbie.com
+   Last Updated: June 4, 2008
+
+   Feel free (nay, compelled) to edit, append, and
+   manipulate this file as you see fit. */
+
+
+@media print {
+
+	/* SECTION 1: Set default width, margin, float, and
+	   background. This prevents elements from extending
+	   beyond the edge of the printed page, and prevents
+	   unnecessary background images from printing */
+	html {
+		background: #fff;
+		width: auto;
+		height: auto;
+		overflow: visible;
+	}
+	body {
+		background: #fff;
+		font-size: 20pt;
+		width: auto;
+		height: auto;
+		border: 0;
+		margin: 0 5%;
+		padding: 0;
+		overflow: visible;
+		float: none !important;
+	}
+
+	/* SECTION 2: Remove any elements not needed in print.
+	   This would include navigation, ads, sidebars, etc. */
+	.nestedarrow,
+	.controls,
+	.fork-reveal,
+	.share-reveal,
+	.state-background,
+	.reveal .progress,
+	.reveal .backgrounds {
+		display: none !important;
+	}
+
+	/* SECTION 3: Set body font face, size, and color.
+	   Consider using a serif font for readability. */
+	body, p, td, li, div {
+		font-size: 20pt!important;
+		font-family: Georgia, "Times New Roman", Times, serif !important;
+		color: #000;
+	}
+
+	/* SECTION 4: Set heading font face, sizes, and color.
+	   Differentiate your headings from your body text.
+	   Perhaps use a large sans-serif for distinction. */
+	h1,h2,h3,h4,h5,h6 {
+		color: #000!important;
+		height: auto;
+		line-height: normal;
+		font-family: Georgia, "Times New Roman", Times, serif !important;
+		text-shadow: 0 0 0 #000 !important;
+		text-align: left;
+		letter-spacing: normal;
+	}
+	/* Need to reduce the size of the fonts for printing */
+	h1 { font-size: 28pt !important;  }
+	h2 { font-size: 24pt !important; }
+	h3 { font-size: 22pt !important; }
+	h4 { font-size: 22pt !important; font-variant: small-caps; }
+	h5 { font-size: 21pt !important; }
+	h6 { font-size: 20pt !important; font-style: italic; }
+
+	/* SECTION 5: Make hyperlinks more usable.
+	   Ensure links are underlined, and consider appending
+	   the URL to the end of the link for usability. */
+	a:link,
+	a:visited {
+		color: #000 !important;
+		font-weight: bold;
+		text-decoration: underline;
+	}
+	/*
+	.reveal a:link:after,
+	.reveal a:visited:after {
+		content: " (" attr(href) ") ";
+		color: #222 !important;
+		font-size: 90%;
+	}
+	*/
+
+
+	/* SECTION 6: more reveal.js specific additions by @skypanther */
+	ul, ol, div, p {
+		visibility: visible;
+		position: static;
+		width: auto;
+		height: auto;
+		display: block;
+		overflow: visible;
+		margin: 0;
+		text-align: left !important;
+	}
+	.reveal pre,
+	.reveal table {
+		margin-left: 0;
+		margin-right: 0;
+	}
+	.reveal pre code {
+		padding: 20px;
+		border: 1px solid #ddd;
+	}
+	.reveal blockquote {
+		margin: 20px 0;
+	}
+	.reveal .slides {
+		position: static !important;
+		width: auto !important;
+		height: auto !important;
+
+		left: 0 !important;
+		top: 0 !important;
+		margin-left: 0 !important;
+		margin-top: 0 !important;
+		padding: 0 !important;
+		zoom: 1 !important;
+
+		overflow: visible !important;
+		display: block !important;
+
+		text-align: left !important;
+		-webkit-perspective: none;
+		   -moz-perspective: none;
+		    -ms-perspective: none;
+		        perspective: none;
+
+		-webkit-perspective-origin: 50% 50%;
+		   -moz-perspective-origin: 50% 50%;
+		    -ms-perspective-origin: 50% 50%;
+		        perspective-origin: 50% 50%;
+	}
+	.reveal .slides section {
+		visibility: visible !important;
+		position: static !important;
+		width: auto !important;
+		height: auto !important;
+		display: block !important;
+		overflow: visible !important;
+
+		left: 0 !important;
+		top: 0 !important;
+		margin-left: 0 !important;
+		margin-top: 0 !important;
+		padding: 60px 20px !important;
+		z-index: auto !important;
+
+		opacity: 1 !important;
+
+		page-break-after: always !important;
+
+		-webkit-transform-style: flat !important;
+		   -moz-transform-style: flat !important;
+		    -ms-transform-style: flat !important;
+		        transform-style: flat !important;
+
+		-webkit-transform: none !important;
+		   -moz-transform: none !important;
+		    -ms-transform: none !important;
+		        transform: none !important;
+
+		-webkit-transition: none !important;
+		   -moz-transition: none !important;
+		    -ms-transition: none !important;
+		        transition: none !important;
+	}
+	.reveal .slides section.stack {
+		padding: 0 !important;
+	}
+	.reveal section:last-of-type {
+		page-break-after: avoid !important;
+	}
+	.reveal section .fragment {
+		opacity: 1 !important;
+		visibility: visible !important;
+
+		-webkit-transform: none !important;
+		   -moz-transform: none !important;
+		    -ms-transform: none !important;
+		        transform: none !important;
+	}
+	.reveal section img {
+		display: block;
+		margin: 15px 0px;
+		background: rgba(255,255,255,1);
+		border: 1px solid #666;
+		box-shadow: none;
+	}
+
+	.reveal section small {
+		font-size: 0.8em;
+	}
+
+}  
+</script>
+
+
+<script id="pdf-css" type="application/dynamic-css">
+    
+/**
+ * This stylesheet is used to print reveal.js
+ * presentations to PDF.
+ *
+ * https://github.com/hakimel/reveal.js#pdf-export
+ */
+
+* {
+	-webkit-print-color-adjust: exact;
+}
+
+body {
+	margin: 0 auto !important;
+	border: 0;
+	padding: 0;
+	float: none !important;
+	overflow: visible;
+}
+
+html {
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+
+/* Remove any elements not needed in print. */
+.nestedarrow,
+.reveal .controls,
+.reveal .progress,
+.reveal .playback,
+.reveal.overview,
+.fork-reveal,
+.share-reveal,
+.state-background {
+	display: none !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	text-shadow: 0 0 0 #000 !important;
+}
+
+.reveal pre code {
+	overflow: hidden !important;
+	font-family: Courier, 'Courier New', monospace !important;
+}
+
+ul, ol, div, p {
+	visibility: visible;
+	position: static;
+	width: auto;
+	height: auto;
+	display: block;
+	overflow: visible;
+	margin: auto;
+}
+.reveal {
+	width: auto !important;
+	height: auto !important;
+	overflow: hidden !important;
+}
+.reveal .slides {
+	position: static;
+	width: 100%;
+	height: auto;
+
+	left: auto;
+	top: auto;
+	margin: 0 !important;
+	padding: 0 !important;
+
+	overflow: visible;
+	display: block;
+
+	-webkit-perspective: none;
+	   -moz-perspective: none;
+	    -ms-perspective: none;
+	        perspective: none;
+
+	-webkit-perspective-origin: 50% 50%; /* there isn't a none/auto value but 50-50 is the default */
+	   -moz-perspective-origin: 50% 50%;
+	    -ms-perspective-origin: 50% 50%;
+	        perspective-origin: 50% 50%;
+}
+
+.reveal .slides section {
+	page-break-after: always !important;
+
+	visibility: visible !important;
+	position: relative !important;
+	display: block !important;
+	position: relative !important;
+
+	margin: 0 !important;
+	padding: 0 !important;
+	box-sizing: border-box !important;
+	min-height: 1px;
+
+	opacity: 1 !important;
+
+	-webkit-transform-style: flat !important;
+	   -moz-transform-style: flat !important;
+	    -ms-transform-style: flat !important;
+	        transform-style: flat !important;
+
+	-webkit-transform: none !important;
+	   -moz-transform: none !important;
+	    -ms-transform: none !important;
+	        transform: none !important;
+}
+
+.reveal section.stack {
+	margin: 0 !important;
+	padding: 0 !important;
+	page-break-after: avoid !important;
+	height: auto !important;
+	min-height: auto !important;
+}
+
+.reveal img {
+	box-shadow: none;
+}
+
+.reveal .roll {
+	overflow: visible;
+	line-height: 1em;
+}
+
+/* Slide backgrounds are placed inside of their slide when exporting to PDF */
+.reveal section .slide-background {
+	display: block !important;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	z-index: -1;
+}
+
+/* All elements should be above the slide-background */
+.reveal section>* {
+	position: relative;
+	z-index: 1;
+}
+
+/* Display slide speaker notes when 'showNotes' is enabled */
+.reveal .speaker-notes-pdf {
+	display: block;
+	width: 100%;
+	max-height: none;
+	left: auto;
+	top: auto;
+	z-index: 100;
+}
+
+/* Display slide numbers when 'slideNumber' is enabled */
+.reveal .slide-number-pdf {
+	display: block;
+	position: absolute;
+	font-size: 14px;
+}
+
+</script>
+
+
+<script>
+var style = document.createElement( 'style' );
+style.type = 'text/css';
+var style_script_id = window.location.search.match( /print-pdf/gi ) ? 'pdf-css' : 'paper-css';
+var style_script = document.getElementById(style_script_id).text;
+style.innerHTML = style_script;
+document.getElementsByTagName('head')[0].appendChild(style);
+</script>
+
+    <script src="presentation_files/header-attrs-2.3/header-attrs.js"></script>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+<section>
+    <h1 class="title">Wind Power Generation Efficiency and Seasonality</h1>
+    <h2 class="author">Jussi Huotari</h2>
+    <h3 class="date">Dec 2020</h3>
+</section>
+
+<section id="clean-electricity" class="title-slide slide level1" data-background-image="http://www.jussihuotari.com/randstan/demo_wind/wind_burning_fossil_fuels.jpg" data-background-opacity=".05" style="color: #FFF9CB;">
+<h1 data-background-image="http://www.jussihuotari.com/randstan/demo_wind/wind_burning_fossil_fuels.jpg" data-background-opacity=".05" style="color: #FFF9CB;">Clean Electricity?</h1>
+<ul>
+<li><p>Traditionally burn fossil fuels</p></li>
+<li><p>Need to change to renewables</p></li>
+<li><p>Renewables are feasible and profitable</p></li>
+<li><p>Problem: intermittent</p></li>
+</ul>
+</section>
+
+<section id="generation-efficiency" class="title-slide slide level1">
+<h1>Generation Efficiency</h1>
+<ul>
+<li>Wind: 7% of total electricity</li>
+<li>Yearly generation 5.9TWh</li>
+<li>Nominal capacity 2284MW</li>
+<li>Generation efficiency</li>
+</ul>
+<p>
+ 
+</p>
+<p><span class="math display">\[
+\frac{5.9TWh}{2284MW \times 365 \times 24h} = 29.5\%
+\]</span></p>
+<p><small style="padding-top: 2em; float: right;">(<a href="https://www.motiva.fi/ratkaisut/uusiutuva_energia/tuulivoima/tuulivoima_suomessa">Motiva, 2019</a>)</small></p>
+<aside class="notes">
+<ul>
+<li>Generation efficiency varies between 0 and 80%. Very rarely closer to 100%</li>
+<li>Overall capacity is growing, now 3x that of five years ago</li>
+</ul>
+</aside>
+</section>
+
+<section id="regression-model" class="title-slide slide level1">
+<h1>Regression Model</h1>
+<p>Objective:</p>
+<ul>
+<li>Trend of generation efficiency</li>
+<li>Patterns to help plan demand response</li>
+</ul>
+<p>
+ 
+</p>
+<p>Two models in Rstan/Stan</p>
+<ul>
+<li>M1: Simple linear Gaussian trend</li>
+<li>M2: Trend + hierarchical seasonal components</li>
+</ul>
+<aside class="notes">
+<ul>
+<li>Electricity is difficult to store</li>
+<li>Value in understanding the generation patterns</li>
+<li>If we can balance demand and supply, less need for polluting reserve power</li>
+</ul>
+</aside>
+</section>
+
+<section id="data-set" class="title-slide slide level1" data-transition="convex-in fade-out">
+<h1 data-transition="convex-in fade-out">Data Set</h1>
+<p><img src="presentation_files/figure-revealjs/unnamed-chunk-2-1.png" width="768" /></p>
+<aside class="notes">
+<ul>
+<li>Data from March 2015. Almost six years.</li>
+<li>Open data, downloaded from Fingrid</li>
+<li>Hourly generation, hourly nominal capacity</li>
+<li>Grouped to weekly means and standard deviation</li>
+<li>Wind energy very varied, underlines the intermittant nature of renewables</li>
+<li>Generation depends heavily on weather conditions and fluctuates according to for example the season, time of day, and location.</li>
+</ul>
+</aside>
+</section>
+
+<section id="data-set-1" class="title-slide slide level1" data-transition="none convex-out">
+<h1 data-transition="none convex-out">Data Set</h1>
+<p><img src="presentation_files/figure-revealjs/unnamed-chunk-3-1.png" width="768" /></p>
+</section>
+
+<section>
+<section id="model-m1" class="title-slide slide level1">
+<h1>Model M1</h1>
+<pre><code data-line-numbers="2,9">
+...
+transformed parameters {
+  vector[N] mu = alpha + beta * x;
+}
+
+model {
+  alpha ~ normal(.3, .2);
+  beta ~ normal(0, .1);
+  sigma ~ normal(.25, .5);
+  y ~ normal(mu, sigma);
+}
+...
+</code></pre>
+</section>
+<section id="m1-regression" class="slide level2">
+<h2>M1 Regression</h2>
+<p><img src="presentation_files/figure-revealjs/loadm1-1.png" width="768" /></p>
+<aside class="notes">
+<ul>
+<li>Simple linear Gaussian: intercept and slope</li>
+<li>Slope is slightly positive (0.8, 2.1 yearly)</li>
+<li>Conclusions (guesses): technical advances, bigger turbines vs best locations taken, warming weather</li>
+</ul>
+</aside>
+</section>
+<section id="m1-ppc" class="slide level2">
+<h2>M1 PPC</h2>
+<p><img src="presentation_files/figure-revealjs/unnamed-chunk-4-1.png" width="768" /></p>
+<aside class="notes">
+<ul>
+<li>Normal distribution allow values &lt;0 and &gt;1</li>
+<li>Overall not too bad</li>
+</ul>
+</aside>
+</section></section>
+<section>
+<section id="model-m2" class="title-slide slide level1">
+<h1>Model M2</h1>
+<p>Time series as components: <span class="math inline">\(y(t) = g(t) + s(t)\)</span></p>
+<ul>
+<li><span class="math inline">\(g(t)\)</span> is linear trend</li>
+<li><span class="math inline">\(s(t)\)</span> is seasonal component
+<ul>
+<li>Model monthly means and standard deviations</li>
+<li>Hierarchy: 6 groups of 12 observations</li>
+</ul></li>
+</ul>
+<aside class="notes">
+<ul>
+<li>Original plan was to model thermal seasons, summer &gt;+10, winter&lt;0.</li>
+<li>Monthly seasons give more granular view, learned from data.</li>
+</ul>
+</aside>
+</section>
+<section id="m2-diagram" class="slide level2">
+<h2>M2 Diagram</h2>
+<p><img data-src="http://www.jussihuotari.com/randstan/demo_wind/bda-hier-model.png" alt="Hierarchical model" /></p>
+</section>
+<section id="m2-checking" class="slide level2">
+<h2>M2 Checking</h2>
+<p><img src="presentation_files/figure-revealjs/loadm2-1.png" width="768" /></p>
+</section>
+<section id="m2-diagnostics" class="slide level2">
+<h2>M2 Diagnostics</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a>ddiag &lt;-<span class="st"> </span><span class="kw">fread</span>(<span class="st">&quot;fit_monitor.csv&quot;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a>ddiag <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">arrange</span>(Rhat) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a><span class="st">  </span><span class="kw">select</span>(Rhat, n_eff, Bulk_ESS, Tail_ESS) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">tail</span>()</span></code></pre></div>
+<pre><code>##        Rhat n_eff Bulk_ESS Tail_ESS
+## 1: 1.009974   553      556     1022
+## 2: 1.009974   546      549     1005
+## 3: 1.009976   550      554     1000
+## 4: 1.009980   550      553     1000
+## 5: 1.009980   551      554     1003
+## 6: 1.009982   551      555     1003</code></pre>
+</section>
+<section id="m2-plot" class="slide level2">
+<h2>M2 Plot</h2>
+<p><img src="presentation_files/figure-revealjs/unnamed-chunk-7-1.png" width="768" /></p>
+</section>
+<section id="m2-monthly-posterior" class="slide level2">
+<h2>M2 Monthly Posterior</h2>
+<p><img src="presentation_files/figure-revealjs/unnamed-chunk-9-1.png" width="768" /></p>
+</section></section>
+<section id="model-comparison" class="title-slide slide level1">
+<h1>Model Comparison</h1>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="kw">print</span>(<span class="kw">loo</span>(fit))</span></code></pre></div>
+<pre><code>## 
+## Computed from 4000 by 298 log-likelihood matrix
+## 
+##          Estimate   SE
+## elpd_loo    215.9 11.8
+## p_loo        13.1  1.1
+## looic      -431.8 23.7
+## ------
+## Monte Carlo SE of elpd_loo is 0.1.
+## 
+## All Pareto k estimates are good (k &lt; 0.5).
+## See help(&#39;pareto-k-diagnostic&#39;) for details.</code></pre>
+<pre><code>##   Model   MSE elpd_loo
+## 1    M1 0.017      180
+## 2    M2 0.013      216</code></pre>
+<aside class="notes">
+<ul>
+<li>M2 is a better model</li>
+<li>Both metrics bad, because learn from future</li>
+<li>Better k-fold or LFO</li>
+<li>Leave-Future-Out didn’t change comparison result</li>
+</ul>
+</aside>
+</section>
+
+<section>
+<section id="forecast" class="title-slide slide level1">
+<h1>Forecast</h1>
+<p><img src="presentation_files/figure-revealjs/forecast-1.png" width="768" /></p>
+<aside class="notes">
+<ul>
+<li>Wide interval</li>
+<li>While that’s realistic, it’s not necessarily good for anything practical.</li>
+</ul>
+</aside>
+</section>
+<section id="seasonal-forecast" class="slide level2">
+<h2>Seasonal Forecast</h2>
+<p><img src="presentation_files/figure-revealjs/unnamed-chunk-13-1.png" width="768" /></p>
+</section></section>
+<section id="conclusion" class="title-slide slide level1" data-background-image="http://www.jussihuotari.com/randstan/demo_wind/wind_turbines_finland.jpg">
+<h1 data-background-image="http://www.jussihuotari.com/randstan/demo_wind/wind_turbines_finland.jpg">Conclusion</h1>
+<ul>
+<li>Predicted yearly increase mean is 1.4%
+<ul>
+<li>90% probability interval (0.8%, 2.1%)</li>
+</ul></li>
+<li>Large seasonal variance
+<ul>
+<li>July median 0.18 vs December median 0.39!</li>
+</ul></li>
+<li>Capacity x 3 during the past six years.</li>
+<li>High daily variation</li>
+<li>More at <a href="http://jussihuotari.com/randstan/demo_wind/wind_seasonality_report.html">jussihuotari.com/randstan/demo_wind/</a></li>
+</ul>
+<aside class="notes">
+<ul>
+<li>The predicted yearly (52 weeks) increase is at 90% probability between 0.8% and 2.1%, with a mean at 1.4%.</li>
+<li>At the same time the average generation efficiency of the wind turbines has increased 8%.</li>
+</ul>
+</aside>
+</section>
+    </div>
+  </div>
+
+  <script src="presentation_files/reveal.js-3.3.0.1/lib/js/head.min.js"></script>
+  <script src="presentation_files/reveal.js-3.3.0.1/js/reveal.js"></script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        // Display a presentation progress bar
+        progress: true,
+        // Display the page number of the current slide
+        slideNumber: true,
+        // Push each slide change to the browser history
+        history: true,
+        // Vertical centering of slides
+        center: false,
+        // Opens links in an iframe preview overlay
+        previewLinks: true,
+        // Transition style
+        transition: 'default', // none/fade/slide/convex/concave/zoom
+        // Transition style for full page slide backgrounds
+        backgroundTransition: 'default', // none/fade/slide/convex/concave/zoom
+
+
+
+        // Optional reveal.js plugins
+        dependencies: [
+        ]
+      });
+    </script>
+  <!-- dynamically load mathjax for compatibility with self-contained -->
+  <script>
+    (function () {
+      var script = document.createElement("script");
+      script.type = "text/javascript";
+      script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+      document.getElementsByTagName("head")[0].appendChild(script);
+    })();
+  </script>
+
+<script>
+  (function() {
+    if (window.jQuery) {
+      Reveal.addEventListener( 'slidechanged', function(event) {  
+        window.jQuery(event.previousSlide).trigger('hidden');
+        window.jQuery(event.currentSlide).trigger('shown');
+      });
+    }
+  })();
+</script>
+
+
+  </body>
+</html>
