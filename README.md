@@ -2,4 +2,4 @@
 
 Data analysis using R and [Stan](https://mc-stan.org/).
 
-* Using [Beta Proportion Distribution](https://jussihuotari.github.io/randstan/demo_beta/beta_proportion.nb.html)
+* Using [Beta Proportion Distribution](http://jussihuotari.com/randstan/demo_beta/beta_proportion.html)
